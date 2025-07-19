@@ -1,16 +1,24 @@
 import random
-import os
 
-os.system('clear')
+debug = False
 
 board0 = [
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [0,0,1,1,0,0,0],
-        [2,2,1,1,0,2,2]]
-think_depth = 4  # Depth for the minimax-like algorithm
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0]]
+
+board1 = [
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,1,1,1,0,0],
+        [2,0,1,1,2,2,2],
+        [2,2,2,1,2,2,2]]
+
+think_depth = 5 # Depth for the minimax-like algorithm
 row_n = len(board0)
 col_n = len(board0[0])
 dir = [[1,0], [1,1], [0,1], [-1,1],
@@ -67,9 +75,10 @@ def maxV(board, side, depth):
                 break
         if full:
             score[c] = -100
-    # show(board)        
-    # print("X" if side==1 else "O", score)    
-    # print()
+    if debug:
+        show(board)        
+        print("X" if side==1 else "O", score)    
+        print()
     return randMax(score)
 
 # Function to make a move on the board
@@ -124,19 +133,19 @@ def PvA():
     # board0 = [[0]*7 for _ in range(6)]  # Reset the board
     show(board0)
     while (not isWin(board0, 1)) and (not isWin(board0, 2)):
+        sel = input("Your move (0-6): ")
+        go(1, int(sel))
+        show(board0)
+        if isWin(board0, 1):
+            print("X wins!")
+            break
+
         col = maxV(board0, 2, think_depth)
         go(2, col[0])
         print()
         show(board0)
         if isWin(board0, 2):
             print("O wins!")
-            break
-
-        sel = input("Your move (0-6): ")
-        go(1, int(sel))
-        show(board0)
-        if isWin(board0, 1):
-            print("X wins!")
             break
 
         if all(board0[0][c] != 0 for c in range(col_n)):
