@@ -42,7 +42,6 @@ def show(board):
             else:
                 print('O', end=' ')
         print()
-    print()
 
 # Function to calculate the best move for a player using a minimax-like algorithm
 def maxV(board, side, depth):
@@ -59,13 +58,14 @@ def maxV(board, side, depth):
                     score[c] += 1
                 else:
                     score[c] -= 0.9 * maxV(board, 2-(side-1), depth-1)[1]
-                # show(board)        
-                # print(side, score)
                 board[r][c] = 0
                 full = False
                 break
         if full:
             score[c] = -100
+    # show(board)        
+    # print("X" if side==1 else "O", score)    
+    # print()
     return randMax(score)
 
 # Function to make a move on the board
@@ -132,7 +132,7 @@ def PvA():
             print("X wins!")
             break
 
-        col = maxV(board0, 1, think_depth)
+        col = maxV(board0, 2, think_depth)
         go(2, col[0])
         show(board0)
         if isWin(board0, 2):
