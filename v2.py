@@ -3,12 +3,13 @@ import os
 
 os.system('clear')
 
-board0 = [[1,0,0,0,0,0,0],
-         [1,2,0,0,0,0,0],
-         [2,2,0,0,0,0,0],
-         [1,2,2,2,0,0,0],
-         [2,1,1,1,2,0,0],
-         [1,2,1,1,2,0,0]]
+board0 = [
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,1,1,0,0,0],
+        [2,2,1,1,0,2,2]]
 think_depth = 4  # Depth for the minimax-like algorithm
 row_n = len(board0)
 col_n = len(board0[0])
@@ -94,11 +95,6 @@ def AvA(verbose=False):
     global board0
     board0 = [[0]*7 for _ in range(6)]  # Reset the board
     while (not isWin(board0, 1)) and (not isWin(board0, 2)):
-        if all(board0[0][c] != 0 for c in range(col_n)):
-            print("It's a draw!") if verbose else None
-            return 0
-            break
-
         col = maxV(board0, 2, think_depth)
         print("Best move for O:", col[0], "@ score:", col[1]) if verbose else None
         go(2, col[0])
@@ -117,15 +113,23 @@ def AvA(verbose=False):
             return 1
             break
 
+        if all(board0[0][c] != 0 for c in range(col_n)):
+            print("It's a draw!") if verbose else None
+            return 0
+            break
 
 # Initialize the board and start the People vs AI game
 def PvA():
     global board0
-    board0 = [[0]*7 for _ in range(6)]  # Reset the board
+    # board0 = [[0]*7 for _ in range(6)]  # Reset the board
     show(board0)
     while (not isWin(board0, 1)) and (not isWin(board0, 2)):
-        if all(board0[0][c] != 0 for c in range(col_n)):
-            print("It's a draw!")
+        col = maxV(board0, 2, think_depth)
+        go(2, col[0])
+        print()
+        show(board0)
+        if isWin(board0, 2):
+            print("O wins!")
             break
 
         sel = input("Your move (0-6): ")
@@ -135,11 +139,8 @@ def PvA():
             print("X wins!")
             break
 
-        col = maxV(board0, 2, think_depth)
-        go(2, col[0])
-        show(board0)
-        if isWin(board0, 2):
-            print("O wins!")
+        if all(board0[0][c] != 0 for c in range(col_n)):
+            print("It's a draw!")
             break
 
 def benchMark(n):
