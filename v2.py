@@ -1,4 +1,7 @@
 import random
+import os
+
+os.system('clear')
 
 board0 = [[1,0,0,0,0,0,0],
          [1,2,0,0,0,0,0],
@@ -6,7 +9,7 @@ board0 = [[1,0,0,0,0,0,0],
          [1,2,2,2,0,0,0],
          [2,1,1,1,2,0,0],
          [1,2,1,1,2,0,0]]
-think_depth = 5  # Depth for the minimax-like algorithm
+think_depth = 4  # Depth for the minimax-like algorithm
 row_n = len(board0)
 col_n = len(board0[0])
 dir = [[1,0], [1,1], [0,1], [-1,1],

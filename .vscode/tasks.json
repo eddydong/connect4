@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Run v2.py with Python 3",
+			"command": "python3",
+			"args": [
+				"/Users/Eddy/Library/Mobile Documents/com~apple~CloudDocs/github clone/connect4/v2.py"
+			],
+			"group": "build",
+			"problemMatcher": []
+		}
+	]
+}
