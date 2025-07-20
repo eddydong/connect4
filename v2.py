@@ -10,13 +10,13 @@ board0 = [
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0]]
 
-board1 = [
+board0 = [
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
-        [0,0,1,1,1,0,0],
-        [2,0,1,1,2,2,2],
-        [2,2,2,1,2,2,2]]
+        [0,0,0,0,0,0,0],
+        [0,2,1,1,1,2,0],
+        [0,2,1,2,1,2,0]]
 
 think_depth = 5 # Depth for the minimax-like algorithm
 row_n = len(board0)
@@ -28,6 +28,8 @@ dir = [[1,0], [1,1], [0,1], [-1,1],
 def isWin(board, side):
     for c in range(col_n):
         for r in range(row_n):
+            if board[r][c] == 0:
+                continue
             for i in range(len(dir)):
                 conn4 = True
                 for step in range(4):
@@ -67,18 +69,18 @@ def maxV(board, side, depth):
             if board[r][c] == 0:
                 board[r][c] = side
                 if isWin(board, side):
-                    score[c] += 1
+                    score[c] = 1
+                    return c, score[c]
                 else:
                     score[c] -= 0.9 * maxV(board, 2-(side-1), depth-1)[1]
                 board[r][c] = 0
                 full = False
                 break
         if full:
-            score[c] = -100
+            score[c] = float("-inf")
     if debug:
-        show(board)        
-        print("X" if side==1 else "O", score)    
-        print()
+        show(board)
+        print("X" if side==1 else "O", score)
     return randMax(score)
 
 # Function to make a move on the board
@@ -133,19 +135,20 @@ def PvA():
     # board0 = [[0]*7 for _ in range(6)]  # Reset the board
     show(board0)
     while (not isWin(board0, 1)) and (not isWin(board0, 2)):
+        print("AI thinking...")
+        col = maxV(board0, 2, think_depth)
+        go(2, col[0])
+        print("AI move:", col[0], "@ score:", col[1])
+        show(board0)
+        if isWin(board0, 2):
+            print("O wins!")
+            break
+
         sel = input("Your move (0-6): ")
         go(1, int(sel))
         show(board0)
         if isWin(board0, 1):
             print("X wins!")
-            break
-
-        col = maxV(board0, 2, think_depth)
-        go(2, col[0])
-        print()
-        show(board0)
-        if isWin(board0, 2):
-            print("O wins!")
             break
 
         if all(board0[0][c] != 0 for c in range(col_n)):
