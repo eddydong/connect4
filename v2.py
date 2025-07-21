@@ -3,7 +3,7 @@ import time
 
 debug = False
 
-board0 = [
+board1 = [
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
@@ -11,13 +11,29 @@ board0 = [
         [0,2,1,1,1,2,0],
         [0,2,1,2,1,2,0]]
 
-board1 = [
+board2 = [
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0],
         [0,0,0,2,0,0,0],
         [0,1,1,1,2,0,0]]
+
+board3 = [
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,2,0,0,0],
+        [0,0,0,1,1,0,0]]
+
+board4 = [
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,1,1,0,0],
+        [0,0,1,2,2,0,0],
+        [0,0,2,1,2,0,0]]
 
 # Initial board to all zeros
 # Commented out if you want to use board0
@@ -30,9 +46,9 @@ col_n = len(board[0])
 
 # player 1 is always X, player 2 is always O
 players = {1: {"type":"HUMAN", "name": "You", "level":0}, 
-           2: {"type":"AI", "name": "AI_6", "level":12},
+           2: {"type":"AI", "name": "AI_6", "level":10},
            22: {"type":"AI", "name": "AI_5", "level":5}} 
-current_player = 1
+current_player = 2
 
 # Function to check board status
 # -1: No win, 0: Draw, 1: Player 1 wins, 2: Player 2 wins
@@ -85,25 +101,53 @@ def show(board):
                 print('O', end=' ')
         print()
 
-# Function to find if the opponent can win in the next move
+# Function to find if the opponent can win in the next move or create a major threat
 def dangerous(board, side):
-    # Return the column where the opponent can win in the next move, or -1 if none
+    opponent = 3 - side
+    # First, check for immediate win threat (must block)
     for c in range(col_n):
-        for r in range(row_n-1, -1, -1):
+        for r in range(row_n - 1, -1, -1):
             if board[r][c] == 0:
-                board[r][c] = 3-side
-                if checkStatus(board) == 3-side:
+                board[r][c] = opponent
+                if checkStatus(board) == opponent:
                     board[r][c] = 0  # Undo move
                     return c
                 board[r][c] = 0  # Undo move
                 break
+    
+    # Second, check for open-ended 2-in-a-row threats
+    # Horizontal: e.g., . O O .
+    for r in range(row_n):
+        for c in range(col_n - 3):
+            window = [board[r][c], board[r][c+1], board[r][c+2], board[r][c+3]]
+            if window.count(opponent) == 2 and window.count(0) == 2:
+                # Check if the empty slots are playable
+                if window[0] == 0 and (r == row_n - 1 or board[r+1][c] != 0)\
+                   and window[3] == 0 and (r == row_n - 1 or board[r+1][c+3] != 0):
+                    return c if random.random() < 0.5 else c + 3
+
+    # Diagonal /
+    for r in range(3, row_n):
+        for c in range(col_n - 3):
+            window = [board[r][c], board[r-1][c+1], board[r-2][c+2], board[r-3][c+3]]
+            if window.count(opponent) == 2 and window.count(0) == 2:
+                if window[0] == 0 and (r == row_n - 1 or board[r+1][c] != 0)\
+                    and window[3] == 0 and (r-2 > 0 and board[r-2][c+3] != 0):
+                     return c if random.random() < 0.5 else c + 3
+
+    # Diagonal \
+    for r in range(row_n - 3):
+        for c in range(col_n - 3):
+            window = [board[r][c], board[r+1][c+1], board[r+2][c+2], board[r+3][c+3]]
+            if window.count(opponent) == 2 and window.count(0) == 2:
+                if window[0] == 0 and (r == row_n - 1 or board[r+1][c] != 0)\
+                    and window[3] == 0 and (r+3 < row_n-1 and board[r+4][c+3] != 0):
+                    return c if random.random() < 0.5 else c + 3
+
     return -1
 
 # Function to calculate the best move for a player using a minimax-like algorithm
 def maxV(board, side, depth, alpha=float("-inf"), beta=float("inf")):
-    isDanger = dangerous(board, side)
-    if isDanger != -1:
-        return isDanger, -1
     board=deepCopy2D(board)
     maxScore = float("-inf")
     maxCol = -1
@@ -177,7 +221,13 @@ def gameplay():
         if (players[current_player]["type"]=="AI"):
             print("AI thinking...")
             start_time = time.time()
-            col = maxV(board, current_player, players[current_player]["level"])
+            
+            isDanger = dangerous(board, current_player)
+            if isDanger != -1:
+                col = (isDanger, -99)
+            else:
+                col = maxV(board, current_player, players[current_player]["level"])
+
             elapsed = time.time() - start_time
             print(players[current_player]["name"], "move:", col[0], "@ score:", col[1], "time used: {:.3f}s".format(elapsed))
             go(current_player, col[0])
