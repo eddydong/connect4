@@ -1,4 +1,5 @@
 import random
+import time
 
 debug = False
 
@@ -10,17 +11,26 @@ board0 = [
         [0,2,1,1,1,2,0],
         [0,2,1,2,1,2,0]]
 
+board1 = [
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0],
+        [0,0,0,2,0,0,0],
+        [0,1,1,1,2,0,0]]
+
 # Initial board to all zeros
 # Commented out if you want to use board0
 board = [[0] * 7 for _ in range(6)]
 
-think_depth = 6 # Depth for the minimax-like algorithm
+board = board  # Use the predefined board0 for testing
+
 row_n = len(board)
 col_n = len(board[0])
 
 # player 1 is always X, player 2 is always O
 players = {1: {"type":"HUMAN", "name": "You", "level":0}, 
-           2: {"type":"AI", "name": "AI_6", "level":6},
+           2: {"type":"AI", "name": "AI_6", "level":12},
            22: {"type":"AI", "name": "AI_5", "level":5}} 
 current_player = 1
 
@@ -75,31 +85,67 @@ def show(board):
                 print('O', end=' ')
         print()
 
-# Function to calculate the best move for a player using a minimax-like algorithm
-def maxV(board, side, depth):
-    board=deepCopy2D(board)
-    score = [0.0] * col_n
-    if depth == 0:
-        return randMax(score)
+# Function to find if the opponent can win in the next move
+def dangerous(board, side):
+    # Return the column where the opponent can win in the next move, or -1 if none
     for c in range(col_n):
-        full = True
         for r in range(row_n-1, -1, -1):
             if board[r][c] == 0:
-                full = False
+                board[r][c] = 3-side
+                if checkStatus(board) == 3-side:
+                    board[r][c] = 0  # Undo move
+                    return c
+                board[r][c] = 0  # Undo move
+                break
+    return -1
+
+# Function to calculate the best move for a player using a minimax-like algorithm
+def maxV(board, side, depth, alpha=float("-inf"), beta=float("inf")):
+    isDanger = dangerous(board, side)
+    if isDanger != -1:
+        return isDanger, -1
+    board=deepCopy2D(board)
+    maxScore = float("-inf")
+    maxCol = -1
+    if depth == 0:
+        return 0, 0
+    # Heuristic: Iterate columns from center to edge
+    center = col_n // 2
+    col_order = [center]
+    for offset in range(1, center + 1):
+        if center - offset >= 0:
+            col_order.append(center - offset)
+        if center + offset < col_n:
+            col_order.append(center + offset)
+    for c in col_order:
+        score = None
+        for r in range(row_n-1, -1, -1):
+            if board[r][c] == 0:
+                score = 0
                 board[r][c] = side
-                if checkStatus(board) == side:
-                    score[c] = 1
-                    return c, score[c]
+                winSide = checkStatus(board)
+                if winSide == side:
+                    score = 1
+                    board[r][c] = 0 # Undo move before returning
+                    return c, score
                 else:
-                    score[c] -= 0.9 * maxV(board, 2-(side-1), depth-1)[1]
+                    # Recursive call with swapped and negated alpha/beta
+                    score = -maxV(board, 2-(side-1), depth-1, -beta, -alpha)[1]
                 board[r][c] = 0
                 break
-        if full:
-            score[c] = float("-inf")
+        if score is not None and maxScore < score:
+            maxScore = score
+            maxCol = c
+
+        # Correct alpha-beta pruning
+        alpha = max(alpha, maxScore)
+        if alpha >= beta:
+            break # Prune
+
     if debug:
         show(board)
-        print("X" if side==1 else "O", score)
-    return randMax(score)
+        print("X" if side==1 else "O", maxScore, "at", maxCol)
+    return maxCol, maxScore
 
 # Function to make a move on the board
 def go(side, col):
@@ -130,9 +176,11 @@ def gameplay():
     while (gameOn):
         if (players[current_player]["type"]=="AI"):
             print("AI thinking...")
+            start_time = time.time()
             col = maxV(board, current_player, players[current_player]["level"])
+            elapsed = time.time() - start_time
+            print(players[current_player]["name"], "move:", col[0], "@ score:", col[1], "time used: {:.3f}s".format(elapsed))
             go(current_player, col[0])
-            print(players[current_player]["name"], "move:", col[0], "@ score:", col[1])
         elif (players[current_player]["type"]=="HUMAN"):
             # Get user input for the move, handling invalid input
             sel = None
