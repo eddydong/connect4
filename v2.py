@@ -35,20 +35,31 @@ board4 = [
         [0,0,1,2,2,0,0],
         [0,0,2,1,2,0,0]]
 
+board5 = [
+        [0,0,0,0,0,0,0],
+        [0,0,0,2,0,0,0],
+        [0,0,0,1,0,0,0],
+        [0,0,0,2,1,0,0],
+        [0,0,0,2,1,0,0],
+        [0,0,2,1,1,0,0]]
+
 # Initial board to all zeros
 # Commented out if you want to use board0
 board = [[0] * 7 for _ in range(6)]
 
-board = board  # Use the predefined board0 for testing
-
 row_n = len(board)
 col_n = len(board[0])
 
+gameProgress = 0 # starting from 1 ending at 42
+
 # player 1 is always X, player 2 is always O
-players = {1: {"type":"HUMAN", "name": "You", "level":0}, 
-           2: {"type":"AI", "name": "AI_11", "level":11},
-           22: {"type":"AI", "name": "AI_5", "level":5}} 
-current_player = 1
+players = {1: {"type":"HUMAN", "name": "You"}, 
+           2: {"type":"AI", "name": "AI", "level": 11}} 
+
+prethink_depth = 3  # Depth for pre-thinking in AI
+
+board = board1 # Use the predefined board0 for testing
+current_player = 2
 
 # Function to check board status
 # -1: No win, 0: Draw, 1: Player 1 wins, 2: Player 2 wins
@@ -88,9 +99,12 @@ def checkStatus(board):
 
 # Print the board, where 1 is X, 2 is O
 def show(board):
+    global gameProgress
+    # count stones on the board
+    gameProgress = sum(board[r][c] != 0 for r in range(row_n) for c in range(col_n))
     for c in range(col_n):
         print(c, end=' ')
-    print()
+    print("... "+str(gameProgress)+"/42")
     for r in range(row_n):
         for c in range(col_n):
             if board[r][c] == 0:
@@ -100,70 +114,39 @@ def show(board):
             else:
                 print('O', end=' ')
         print()
-
-# Function to find if the opponent can win in the next move or create a major threat
-def dangerous(board, side):
-    opponent = 3 - side
-    # First, check for immediate win threat (must block)
-    for c in range(col_n):
-        for r in range(row_n - 1, -1, -1):
-            if board[r][c] == 0:
-                board[r][c] = opponent
-                if checkStatus(board) == opponent:
-                    board[r][c] = 0  # Undo move
-                    return c
-                board[r][c] = 0  # Undo move
-                break
-    
-    # Second, check for open-ended 2-in-a-row threats
-    # Horizontal: e.g., . O O .
-    for r in range(row_n):
-        for c in range(col_n - 3):
-            window = [board[r][c], board[r][c+1], board[r][c+2], board[r][c+3]]
-            if window.count(opponent) == 2 and window.count(0) == 2:
-                # Check if the empty slots are playable
-                if window[0] == 0 and (r == row_n - 1 or board[r+1][c] != 0)\
-                   and window[3] == 0 and (r == row_n - 1 or board[r+1][c+3] != 0):
-                    return c if random.random() < 0.5 else c + 3
-
-    # Diagonal /
-    for r in range(3, row_n):
-        for c in range(col_n - 3):
-            window = [board[r][c], board[r-1][c+1], board[r-2][c+2], board[r-3][c+3]]
-            if window.count(opponent) == 2 and window.count(0) == 2:
-                if window[0] == 0 and (r == row_n - 1 or board[r+1][c] != 0)\
-                    and window[3] == 0 and (r-2 > 0 and board[r-2][c+3] != 0):
-                     return c if random.random() < 0.5 else c + 3
-
-    # Diagonal \
-    for r in range(row_n - 3):
-        for c in range(col_n - 3):
-            window = [board[r][c], board[r+1][c+1], board[r+2][c+2], board[r+3][c+3]]
-            if window.count(opponent) == 2 and window.count(0) == 2:
-                if window[0] == 0 and (r == row_n - 1 or board[r+1][c] != 0)\
-                    and window[3] == 0 and (r+3 < row_n-1 and board[r+4][c+3] != 0):
-                    return c if random.random() < 0.5 else c + 3
-
-    return -1
+    print()
 
 # Function to calculate the best move for a player using a minimax-like algorithm
 def maxV(board, side, depth, alpha=float("-inf"), beta=float("inf")):
+    
+    # Make a deep copy of the board to avoid modifying the original
     board=deepCopy2D(board)
+
+    # Initialize variables for tracking the best score and column
     maxScore = float("-inf")
     maxCol = -1
+
+    # Check if max depth is reached 
     if depth == 0:
         return 0, 0
-    # Heuristic: Iterate columns from center to edge
+    
+    # Heuristic: Iterate columns from center to edge with randomization
     center = col_n // 2
     col_order = [center]
     for offset in range(1, center + 1):
+        cols = []
         if center - offset >= 0:
-            col_order.append(center - offset)
+            cols.append(center - offset)
         if center + offset < col_n:
-            col_order.append(center + offset)
+            cols.append(center + offset)
+        random.shuffle(cols)
+        col_order.extend(cols)
+
+    # Iterate through columns in the randomized order
     for c in col_order:
-        score = None
-        for r in range(row_n-1, -1, -1):
+        score = None # Initialize score to None for each column
+        for r in range(row_n-1, -1, -1): # Check from bottom to top
+            # Check if the column is not full
             if board[r][c] == 0:
                 score = 0
                 board[r][c] = side
@@ -171,12 +154,17 @@ def maxV(board, side, depth, alpha=float("-inf"), beta=float("inf")):
                 if winSide == side:
                     score = 1
                     board[r][c] = 0 # Undo move before returning
-                    return c, score
+                    # return c, score # Found winning move
                 else:
                     # Recursive call with swapped and negated alpha/beta
-                    score = -maxV(board, 2-(side-1), depth-1, -beta, -alpha)[1]
+                    score = -maxV(board, 2-(side-1), depth-1, -beta, -alpha)[1] * 0.95
                 board[r][c] = 0
                 break
+
+        if debug and depth==3:
+            print("X" if side==1 else "O","col:"+str(c), "score:", score)
+
+        # update maxScore and maxCol if a better score is found
         if score is not None and maxScore < score:
             maxScore = score
             maxCol = c
@@ -186,9 +174,11 @@ def maxV(board, side, depth, alpha=float("-inf"), beta=float("inf")):
         if alpha >= beta:
             break # Prune
 
-    if debug:
+    # debug output
+    if debug and depth==3:
+        print("depth="+str(depth)+":", "X" if side==1 else "O", "getting", maxScore, "at", maxCol)
         show(board)
-        print("X" if side==1 else "O", maxScore, "at", maxCol)
+
     return maxCol, maxScore
 
 # Function to make a move on the board
@@ -219,18 +209,21 @@ def gameplay():
     gameOn = True
     while (gameOn):
         if (players[current_player]["type"]=="AI"):
-            print("AI thinking...")
+            # AI's turn to make a move
             start_time = time.time()
-            
-            isDanger = dangerous(board, current_player)
-            if isDanger != -1:
-                col = (isDanger, -99)
-            else:
+            # Check for immediate winning move from opponent perspective
+            col = maxV(board, 3-current_player, prethink_depth)
+            # If any, shallow thinking to defend without deep thinking
+            if col[1] == 1 or gameProgress < 2:
+                print("AI shallow-thinking("+str(prethink_depth)+")...")
+                col = maxV(board, current_player, prethink_depth+1)
+            else: # If not, perform deep thinking
+                print("AI deep-thinking("+str(players[current_player]["level"])+")...")
                 col = maxV(board, current_player, players[current_player]["level"])
-
             elapsed = time.time() - start_time
             print(players[current_player]["name"], "move:", col[0], "@ score:", col[1], "time used: {:.3f}s".format(elapsed))
             go(current_player, col[0])
+
         elif (players[current_player]["type"]=="HUMAN"):
             # Get user input for the move, handling invalid input
             sel = None
@@ -246,7 +239,8 @@ def gameplay():
         else:
             print("Unknown player type, skipping turn.")
 
-        show(board)
+        show(board) # Print the board after each move
+        # Check the status of the game
         status = checkStatus(board)
         if status > 0:
             print(players[status]["name"], "wins!")
