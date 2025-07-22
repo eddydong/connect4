@@ -12,7 +12,7 @@ col_n = len(board[0])
 
 gameProgress = 0 # starting from 1 ending at 42
 prethink_depth = 3  # Depth for pre-thinking in AI
-current_player = 2
+current_player = 1
 
 # player 1 is always X, player 2 is always O
 players = {1: {"type":"HUMAN", "name": "You"}, 
@@ -110,11 +110,9 @@ def maxV(board, side, depth, alpha=float("-inf"), beta=float("inf")):
                 winSide = checkStatus(board)
                 if winSide == side:
                     score = 1
-                    board[r][c] = 0 # Undo move before returning
-                    return c, score # Found winning move
                 else:
                     # Recursive call with swapped and negated alpha/beta
-                    score = -maxV(board, 2-(side-1), depth-1, -beta, -alpha)[1] * 0.95
+                    score = -maxV(board, 2-(side-1), depth-1, -beta, -alpha)[1]
                 board[r][c] = 0
                 break
 
