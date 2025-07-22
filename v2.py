@@ -46,9 +46,9 @@ col_n = len(board[0])
 
 # player 1 is always X, player 2 is always O
 players = {1: {"type":"HUMAN", "name": "You", "level":0}, 
-           2: {"type":"AI", "name": "AI_6", "level":10},
+           2: {"type":"AI", "name": "AI_11", "level":11},
            22: {"type":"AI", "name": "AI_5", "level":5}} 
-current_player = 2
+current_player = 1
 
 # Function to check board status
 # -1: No win, 0: Draw, 1: Player 1 wins, 2: Player 2 wins
