@@ -171,7 +171,7 @@ def gameplay():
             # Check for immediate winning move from opponent perspective
             col = maxV(board, 3-current_player, prethink_depth)
             # If any, shallow thinking to defend without deep thinking
-            if col[1] == 1 or gameProgress < 2:
+            if col[1] == 1 or gameProgress < 3:
                 print("AI shallow-thinking("+str(prethink_depth)+")...")
                 col = maxV(board, current_player, prethink_depth+1)
             else: # If not, perform deep thinking
