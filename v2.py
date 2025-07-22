@@ -3,46 +3,6 @@ import time
 
 debug = False
 
-board1 = [
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,2,1,1,1,2,0],
-        [0,2,1,2,1,2,0]]
-
-board2 = [
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,2,0,0,0],
-        [0,1,1,1,2,0,0]]
-
-board3 = [
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,2,0,0,0],
-        [0,0,0,1,1,0,0]]
-
-board4 = [
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0],
-        [0,0,0,1,1,0,0],
-        [0,0,1,2,2,0,0],
-        [0,0,2,1,2,0,0]]
-
-board5 = [
-        [0,0,0,0,0,0,0],
-        [0,0,0,2,0,0,0],
-        [0,0,0,1,0,0,0],
-        [0,0,0,2,1,0,0],
-        [0,0,0,2,1,0,0],
-        [0,0,2,1,1,0,0]]
-
 # Initial board to all zeros
 # Commented out if you want to use board0
 board = [[0] * 7 for _ in range(6)]
@@ -51,15 +11,12 @@ row_n = len(board)
 col_n = len(board[0])
 
 gameProgress = 0 # starting from 1 ending at 42
+prethink_depth = 3  # Depth for pre-thinking in AI
+current_player = 2
 
 # player 1 is always X, player 2 is always O
 players = {1: {"type":"HUMAN", "name": "You"}, 
            2: {"type":"AI", "name": "AI", "level": 11}} 
-
-prethink_depth = 3  # Depth for pre-thinking in AI
-
-board = board1 # Use the predefined board0 for testing
-current_player = 2
 
 # Function to check board status
 # -1: No win, 0: Draw, 1: Player 1 wins, 2: Player 2 wins
