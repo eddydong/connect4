@@ -111,7 +111,7 @@ def maxV(board, side, depth, alpha=float("-inf"), beta=float("inf")):
                 if winSide == side:
                     score = 1
                     board[r][c] = 0 # Undo move before returning
-                    # return c, score # Found winning move
+                    return c, score # Found winning move
                 else:
                     # Recursive call with swapped and negated alpha/beta
                     score = -maxV(board, 2-(side-1), depth-1, -beta, -alpha)[1] * 0.95
