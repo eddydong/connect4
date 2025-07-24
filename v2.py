@@ -16,14 +16,14 @@ current_player = 1
 
 # player 1 is always X, player 2 is always O
 players = {1: {"type":"HUMAN", "name": "You"}, 
-           2: {"type":"AI", "name": "AI", "level": 11}} 
+           2: {"type":"AI", "name": "AI", "level": 10}} 
 
 # Function to check board status
 # -1: No win, 0: Draw, 1: Player 1 wins, 2: Player 2 wins
 def checkStatus(board):
     # Check if top row is full (Draw)
     if all(board[0][c] != 0 for c in range(col_n)):
-        return 0
+        return 0  # Draw
     # Horizontal (rows 0-5, cols 0-3)
     for r in range(row_n):
         for c in range(col_n - 3):
