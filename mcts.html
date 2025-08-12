@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Connect-4 MCTS</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #222;
+            color: #eee;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            -moz-user-select: none;
+        }
+        #board {
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            width: 90vw;
+            max-width: 600px;
+            aspect-ratio: 7 / 6;
+            justify-content: center;
+            align-items: center;
+        }
+        .row {
+            display: flex;
+            flex: 1 1 0;
+            justify-content: center;
+        }
+        .cell {
+            flex: 1 1 0;
+            aspect-ratio: 1 / 1;
+            border: 1px solid #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(2vw + 2vh);
+            min-width: 32px;
+            min-height: 32px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+        .ai-last-move {
+            color: red;
+            font-weight: bold;
+        }
+        #status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 20px;
+            margin: 20px;
+        }
+        #main-title {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 20px;
+            margin: 20px;
+        }
+        @media (max-width: 600px) {
+            #board { width: 98vw; max-width: 98vw; }
+        }
+    </style>
+</head>
+<body>
+    <div id="main-title">Connect-4: You (X) vs AI (O)</div>
+    <div id="board"></div>
+    <div id="status"></div>
+    <script>
+const ROWS = 6, COLUMNS = 7, EMPTY = 0, PLAYER1 = 1, PLAYER2 = 2;
+let board = Array.from({length: ROWS}, () => Array(COLUMNS).fill(EMPTY));
+let currentPlayer = PLAYER1;
+let gamesPlayed = 0;
+let aiWins = 0;
+let gameOver = false;
+let lastAIMove = null;
+let lastAIMoveRow = null;
+
+function validMoves(b) {
+    return [...Array(COLUMNS).keys()].filter(c => b[0][c] === EMPTY);
+}
+function makeMove(b, col, player) {
+    for (let row = ROWS - 1; row >= 0; row--) {
+        if (b[row][col] === EMPTY) {
+            b[row][col] = player;
+            // Track last AI move row/col
+            if (player === PLAYER2 && b === board) {
+                lastAIMove = col;
+                lastAIMoveRow = row;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+function checkWinner(b) {
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLUMNS; c++) {
+            let player = b[r][c];
+            if (player === EMPTY) continue;
+            // Horizontal
+            if (c <= COLUMNS - 4 && [...Array(4).keys()].every(i => b[r][c+i] === player)) return player;
+            // Vertical
+            if (r <= ROWS - 4 && [...Array(4).keys()].every(i => b[r+i][c] === player)) return player;
+            // Diagonal /
+            if (r >= 3 && c <= COLUMNS - 4 && [...Array(4).keys()].every(i => b[r-i][c+i] === player)) return player;
+            // Diagonal \
+            if (r <= ROWS - 4 && c <= COLUMNS - 4 && [...Array(4).keys()].every(i => b[r+i][c+i] === player)) return player;
+        }
+    }
+    return null;
+}
+function isDraw(b) {
+    return validMoves(b).length === 0;
+}
+class MCTSNode {
+    constructor(board, player, parent=null, move=null) {
+        this.board = board.map(row => row.slice());
+        this.player = player;
+        this.parent = parent;
+        this.move = move;
+        this.children = [];
+        this.visits = 0;
+        this.wins = 0;
+    }
+    expand() {
+        for (let move of validMoves(this.board)) {
+            let newBoard = this.board.map(row => row.slice());
+            makeMove(newBoard, move, this.player);
+            this.children.push(new MCTSNode(newBoard, 3 - this.player, this, move));
+        }
+    }
+    bestChild(c_param=1.4) {
+        let choices = this.children.map(child => {
+            let winRate = child.visits > 0 ? child.wins / child.visits : 0;
+            let explore = c_param * Math.sqrt(2 * Math.log(this.visits + 1) / (child.visits + 1));
+            return winRate + explore;
+        });
+        return this.children[choices.indexOf(Math.max(...choices))];
+    }
+}
+function randomPlayout(board, player) {
+    let b = board.map(row => row.slice());
+    let p = player;
+    while (true) {
+        let winner = checkWinner(b);
+        if (winner) return winner;
+        if (isDraw(b)) return 0;
+        let moves = validMoves(b);
+        let move = moves[Math.floor(Math.random() * moves.length)];
+        makeMove(b, move, p);
+        p = 3 - p;
+    }
+}
+function mctsSearch(root, itermax) {
+    for (let i = 0; i < itermax; i++) {
+        let node = root;
+        // Selection
+        while (node.children.length) node = node.bestChild();
+        // Expansion
+        let winner = checkWinner(node.board);
+        if (!winner && !isDraw(node.board)) {
+            node.expand();
+            if (node.children.length) node = node.children[Math.floor(Math.random() * node.children.length)];
+        }
+        // Simulation
+        let result = randomPlayout(node.board, node.player);
+        // Backpropagation
+        while (node) {
+            node.visits++;
+            if (result === 0) node.wins += 0.5;
+            else if (result === 3 - node.player) node.wins += 1;
+            node = node.parent;
+        }
+    }
+    let best = root.children.reduce((a, b) => a.visits > b.visits ? a : b);
+    return best.move;
+}
+function renderBoard() {
+    let boardDiv = document.getElementById('board');
+    boardDiv.innerHTML = '';
+    boardDiv.style.height = (window.innerWidth < 600 ? window.innerWidth * 6/7 : boardDiv.offsetWidth * 6/7) + 'px';
+    for (let r = 0; r < ROWS; r++) {
+        let rowDiv = document.createElement('div');
+        rowDiv.className = 'row';
+        for (let c = 0; c < COLUMNS; c++) {
+            let cellDiv = document.createElement('div');
+            cellDiv.className = 'cell';
+            cellDiv.textContent = board[r][c] === EMPTY ? '' : (board[r][c] === PLAYER1 ? 'X' : 'O');
+            cellDiv.dataset.col = c;
+            // Highlight only the last AI piece
+            if (lastAIMove !== null && lastAIMoveRow !== null && c === lastAIMove && r === lastAIMoveRow && board[r][c] === PLAYER2) {
+                cellDiv.classList.add('ai-last-move');
+            }
+            if (currentPlayer === PLAYER1 && validMoves(board).includes(c)) {
+                cellDiv.onclick = () => playerMove(c);
+            } else {
+                cellDiv.onclick = null;
+            }
+            rowDiv.appendChild(cellDiv);
+        }
+        boardDiv.appendChild(rowDiv);
+    }
+}
+
+function setStatus(msg) {
+    document.getElementById('status').textContent = msg;
+}
+function playerMove(move) {
+    makeMove(board, move, PLAYER1);
+    currentPlayer = PLAYER2;
+    nextTurn();
+}
+function aiMove() {
+    setStatus('AI is thinking...');
+    setTimeout(() => {
+        let root = new MCTSNode(board, PLAYER2);
+        root.expand();
+        let move = mctsSearch(root, 10000);
+        makeMove(board, move, PLAYER2); // lastAIMove/lastAIMoveRow set here
+        setStatus(`AI plays column ${move}`);
+        currentPlayer = PLAYER1;
+        nextTurn();
+    }, 100);
+}
+function nextTurn() {
+    if (gameOver) return;
+    renderBoard();
+    let winner = checkWinner(board);
+    let draw = isDraw(board);
+    // Only handle win/draw once per move
+    if (winner || draw) {
+        gameOver = true;
+        gamesPlayed++;
+        if (winner === PLAYER2) aiWins++;
+        if (winner) {
+            setStatus(winner === PLAYER1 ? 'You win! Click board to play again.' : 'AI wins! Click board to play again.');
+            updateAIWinrate(aiWins, gamesPlayed);
+        } else {
+            setStatus('Draw! Click board to play again.');
+        }
+        // Prevent further moves after game end
+        let boardDiv = document.getElementById('board');
+        boardDiv.onclick = () => {
+            board = Array.from({length: ROWS}, () => Array(COLUMNS).fill(EMPTY));
+            currentPlayer = PLAYER1;
+            lastAIMove = null;
+            lastAIMoveRow = null;
+            boardDiv.onclick = null;
+            gameOver = false;
+            renderBoard();
+            setStatus('Your turn!');
+        };
+        return;
+    }
+    // Only call aiMove if game is not over
+    if (currentPlayer === PLAYER2) aiMove();
+
+    function updateAIWinrate(aiWins, gamesPlayed) {
+        let rate = gamesPlayed > 0 ? ((aiWins / gamesPlayed) * 100).toFixed(1) : '0.0';
+        document.getElementById('main-title').textContent = `AI Win Rate: ${rate}% (${aiWins}/${gamesPlayed})`;
+    }
+}
+renderBoard();
+setStatus('Your turn!');
+
+    </script>
+</body>
+</html>
