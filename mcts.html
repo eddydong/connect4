@@ -62,6 +62,13 @@
 </head>
 <body>
     <div id="main-title">Connect-4: You (X) vs AI (O)</div>
+    <div style="margin:10px;">
+        <label for="ai-select">AI Type:</label>
+        <select id="ai-select">
+            <option value="minimax">Minimax</option>
+            <option value="mcts">MCTS</option>
+        </select>
+    </div>
     <div id="board"></div>
     <div id="status"></div>
     <script>
@@ -212,14 +219,119 @@ function playerMove(move) {
 function aiMove() {
     setStatus('AI is thinking...');
     setTimeout(() => {
-        let root = new MCTSNode(board, PLAYER2);
-        root.expand();
-        let move = mctsSearch(root, 10000);
-        makeMove(board, move, PLAYER2); // lastAIMove/lastAIMoveRow set here
+        let aiType = document.getElementById('ai-select').value;
+        let move;
+        if (aiType === 'minimax') {
+            move = minimaxRoot(board, PLAYER2, 7); // Depth 7 for better evaluation
+        } else {
+            let root = new MCTSNode(board, PLAYER2);
+            root.expand();
+            move = mctsSearch(root, 10000);
+        }
+        makeMove(board, move, PLAYER2);
         setStatus(`AI plays column ${move}`);
         currentPlayer = PLAYER1;
         nextTurn();
     }, 100);
+}
+
+// Heuristic evaluation function for board positions
+function evaluateBoard(b, player) {
+    let score = 0;
+    // Center column preference
+    for (let r = 0; r < ROWS; r++) {
+        if (b[r][Math.floor(COLUMNS/2)] === player) score += 3;
+    }
+    // Score horizontal, vertical, diagonal lines
+    function scoreLine(line) {
+        let countPlayer = line.filter(x => x === player).length;
+        let countOpponent = line.filter(x => x === 3 - player).length;
+        if (countPlayer > 0 && countOpponent === 0) {
+            if (countPlayer === 4) return 1000;
+            if (countPlayer === 3) return 50;
+            if (countPlayer === 2) return 10;
+        }
+        if (countOpponent > 0 && countPlayer === 0) {
+            if (countOpponent === 4) return -1000;
+            if (countOpponent === 3) return -80;
+            if (countOpponent === 2) return -15;
+        }
+        return 0;
+    }
+    // Horizontal
+    for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c <= COLUMNS - 4; c++) {
+            score += scoreLine([b[r][c], b[r][c+1], b[r][c+2], b[r][c+3]]);
+        }
+    }
+    // Vertical
+    for (let c = 0; c < COLUMNS; c++) {
+        for (let r = 0; r <= ROWS - 4; r++) {
+            score += scoreLine([b[r][c], b[r+1][c], b[r+2][c], b[r+3][c]]);
+        }
+    }
+    // Diagonal /
+    for (let r = 3; r < ROWS; r++) {
+        for (let c = 0; c <= COLUMNS - 4; c++) {
+            score += scoreLine([b[r][c], b[r-1][c+1], b[r-2][c+2], b[r-3][c+3]]);
+        }
+    }
+    // Diagonal \
+    for (let r = 0; r <= ROWS - 4; r++) {
+        for (let c = 0; c <= COLUMNS - 4; c++) {
+            score += scoreLine([b[r][c], b[r+1][c+1], b[r+2][c+2], b[r+3][c+3]]);
+        }
+    }
+    return score;
+}
+
+// Minimax with alpha-beta pruning
+function minimaxRoot(board, player, depth) {
+    let moves = validMoves(board);
+    let bestScore = -Infinity;
+    let bestMove = moves[0];
+    for (let move of moves) {
+        let newBoard = board.map(row => row.slice());
+        makeMove(newBoard, move, player);
+        let score = minimax(newBoard, depth - 1, false, player, -Infinity, Infinity);
+        if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+        }
+    }
+    return bestMove;
+}
+
+function minimax(board, depth, maximizing, aiPlayer, alpha, beta) {
+    let winner = checkWinner(board);
+    if (winner === aiPlayer) return 10000;
+    if (winner === 3 - aiPlayer) return -10000;
+    if (isDraw(board)) return 0;
+    if (depth === 0) return evaluateBoard(board, aiPlayer);
+    let moves = validMoves(board);
+    if (maximizing) {
+        let maxEval = -Infinity;
+        for (let move of moves) {
+            let newBoard = board.map(row => row.slice());
+            makeMove(newBoard, move, aiPlayer);
+            let eval = minimax(newBoard, depth - 1, false, aiPlayer, alpha, beta);
+            maxEval = Math.max(maxEval, eval);
+            alpha = Math.max(alpha, eval);
+            if (beta <= alpha) break;
+        }
+        return maxEval;
+    } else {
+        let minEval = Infinity;
+        for (let move of moves) {
+            let newBoard = board.map(row => row.slice());
+            makeMove(newBoard, move, 3 - aiPlayer);
+            let eval = minimax(newBoard, depth - 1, true, aiPlayer, alpha, beta);
+            minEval = Math.min(minEval, eval);
+            beta = Math.min(beta, eval);
+            if (beta <= alpha) break;
+        }
+        return minEval;
+    }
 }
 function nextTurn() {
     if (gameOver) return;
